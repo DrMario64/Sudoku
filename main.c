@@ -30,7 +30,7 @@ void test(int *x);
 
 int main() {
     FILE *inputptr;
-    int i, j, k, in, zero0, zeroes = 0;
+    int i, j, checks, in, zero0, zeroes = 0;
     int arr[9][9], nums[9][9];
     char buffer[11];
     inputptr = fopen("puzzle1.txt", "r");
@@ -66,13 +66,13 @@ int main() {
     }
 
     //for (k = 0; k < 20; k++) {
-    k = 0;
+    checks = 0;
     while (zeroes > 0) {
         zero0 = zeroes;
-        k++;
+        checks++;
 
         check(arr, nums, &zeroes);
-        printf("check %d, %d zeroes\n", k, zeroes);
+        printf("check %d, %d zeroes\n", checks, zeroes);
         printPuzzle10(arr);
         //printPuzzle02(nums);
 
@@ -162,17 +162,17 @@ void doubleCheck(int arr[9][9], int nums[9][9]) {
                 row = 3 * (j / 3);      //0 if 0 <= j < 3, 3 if 3 <= j < 6, and 6 if 6 <= j < 9
                 for (a = column; a < column + 3; a++) {                 // for each element in the puzzle, go through every other element in the same 3x3 box
                     for (b = row; b < row + 3; b++) {
-                        if (arr[a][b] == 0 && !(a == (i) && b == j)) {
-                            hiddenSingle &= ~(nums[a][b]);
-                            if (hiddenSingle == 0) { break; }
+                        if (arr[a][b] == 0 && !(a == (i) && b == j)) {  //make sure the square isnt already solved and isnt the same square being checked
+                            hiddenSingle &= ~(nums[a][b]);      //if there is a hidden single, no other squares will have that bit set
+                            if (hiddenSingle == 0) { break; }   //break if no hidden single
                         }
                     }
                     if (hiddenSingle == 0) { break; }
                 }
                 ones = 0;
-                if (hiddenSingle != 0) {
+                if (hiddenSingle != 0) {    //nonzero hidden single means we have at least one unique bit (more than one unique bit means we messed up but its always good to check anyways)
                     for (k = 0; k < 9; k++) {
-                        if (hiddenSingle & (1 << k)) { ones++; }
+                        if (hiddenSingle & (1 << k)) { ones++; }    //find the set bit
                     }
                     if (ones == 1) {
                         nums[i][j] &= hiddenSingle;
@@ -221,18 +221,19 @@ void check(int arr[9][9], int nums[9][9], int *zeroes) {
             ones = 0;   //reset variables
             bit = 0;
         }
+        //ones = 0;
     }
 }
 
 void box(int arr[9][9], int nums[9][9], int column, int row) {
     int i, j, visibleNum = 0;    //visibleNum = all possible numbers that are present in a 3x3 box (if a corresponding bit is 0/cleared, the 3x3 box is missing that number)
-    for (i = column; i < column + 3; i++) {         //find all non zero numbers in a given 3x3 box
-        for (j = row; j < row + 3; j++) {
+    for (i = row; i < row + 3; i++) {         //find all non zero numbers in a given 3x3 box
+        for (j = column; j < column + 3; j++) {
             if (arr[i][j] != 0) { visibleNum |= 1 << (arr[i][j] - 1); }     //if a square already has a value, set the corresponding bit in visibleNum
         }
     }
-    for (i = column; i < column + 3; i++) {         //go through all zero values in a given 3x3 box
-        for (j = row; j < row + 3; j++) {
+    for (i = row; i < row + 3; i++) {         //go through all zero values in a given 3x3 box
+        for (j = column; j < column + 3; j++) {
             if (arr[i][j] == 0) {
                 nums[i][j] = binaryConvert(visibleNum, nums[i][j]);
             }
