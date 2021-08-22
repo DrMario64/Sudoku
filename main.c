@@ -1,6 +1,20 @@
-#include <stdlib.h>
+/*
+ * Author: Lucas Alm
+ * Completed 20 AUG 2021
+ *
+ * This program reads the contents of a text file that contains 81 integers with no spaces and new lines every 9 digits.
+ * It then fills in each 0 as if the txt file were a sudoku puzzle. That is, no two of the same numbers can share the same
+ * row, column, or 3x3 box.  This program prints out the original puzzle and the number of blank spaces that need to be
+ * solved, then once it is finished, it either prints out that the puzzle is impossible (or the program cannot solve it)
+ * or it prints out the completed puzzle and how many iterations (times needed to go through the entire puzzle to narrow
+ * down possible candidates for each individual square) it needed to complete it.
+ *
+ * This is all done by creating a 2D array (nums) that is a 1:1 to the actual array of integers. However, nums is an array
+ * of 9 bit integers where each bit is associated with a potential candidate for its square. So if a square has all 9 possible
+ * candidates, its nums value would be 511 and as the program narrows down possible candidates, this number will get smaller
+ * since bits will be cleared as a square gets less and less candidates.
+ */
 #include <stdio.h>
-#include <string.h>
 
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte) \
@@ -18,15 +32,15 @@ int binaryConvert(int visibleNum, int binary);      //set the nth bit of binary 
 void box(int arr[9][9], int nums[9][9], int column, int row);   //same as column but with the 3x3 boxes
 void check(int arr[9][9], int nums[9][9], int *zeroes); //'checks' nums and updates arr if there is only one possible solution to a given square (ie only one of the nine bits is set)
 void column(int arr[9][9], int nums[9][9], int column); //goes through the column of a given square and updates nums by clearing bits as needed (ie if there is a one, clear all rightmost bits in that column)
-void HiddenSingleBox(int arr[9][9], int nums[9][9]);
+void HiddenSingleBox(int arr[9][9], int nums[9][9]);    //goes through the puzzle until it finds a hidden single (a square in a row/column/box that can only be one number, put has other candidates as well)
 void initializeNums(int arr[9][9], int nums[9][9]);     //initialize all values of num that correspond to all elements of arr that are equivalent to 0 to be 111111111 (or 511 decimal)
 void initializeZero(int nums[9][9]);        //initialize the 2D array of 9 bit numbers that represent each possible number that could be in its related square
 void printPuzzle10(int arr[9][9]);      //prints the puzzle in base 10 (decimal)
-void printPuzzle02(int nums[9][9]);     //prints the puzzle in base 2 (binary)
+void printPuzzle02(int nums[9][9]);     //prints the puzzle in base 2 (binary). Used for debugging.
 void row(int arr[9][9], int nums[9][9], int row);   //same as column but with rows
-void HiddenSingleRowCol(int arr[9][9], int nums[9][9]);
-void ClaimingPairBox(int arr[9][9], int nums[9][9]);
-void ClaimingPairRowCol(int arr[9][9], int nums[9][9]);
+void HiddenSingleRowCol(int arr[9][9], int nums[9][9]);     //same as HiddenSingleBox but only checks the row and column
+void ClaimingPairBox(int arr[9][9], int nums[9][9]);    //goes through the puzzle until it finds two pairs of candidates that are not found in any other squares in the same 3x3 box
+void ClaimingPairRowCol(int arr[9][9], int nums[9][9]);     //same as ClaimingPairBox but only checks the row and column
 
 void test(int *x);
 
@@ -73,11 +87,17 @@ int main() {
         checks++;
 
         check(arr, nums, &zeroes);
-        //printf("check %d, %d zeroes\n", checks, zeroes);
-        //printPuzzle10(arr);
-        //printPuzzle02(nums);
 
-        if (zeroCheck == zeroes) {
+        /*printf("check %d, %d zeroes\n", checks, zeroes);              USED FOR DEBUGGING
+        printPuzzle10(arr);
+        printPuzzle02(nums);*/
+
+
+        /* we could go through each method in every iteration, however that would be extremely inefficient. It is much
+         * better to rely heavily on the simpler algorithms/common case more often then resort to the more complicated
+         * ones if they fail.
+         */
+        if (zeroCheck == zeroes) {  //continuously check to see if the number of zeroes in the puzzle has stayed the same.
             HiddenSingleBox(arr, nums);
             check(arr, nums, &zeroes);
             if (zeroCheck == zeroes) {
@@ -89,7 +109,11 @@ int main() {
                     if (zeroCheck == zeroes) {
                         ClaimingPairRowCol(arr, nums);
                         check(arr, nums, &zeroes);
-                        if (zeroCheck == zeroes) { return 0; }
+                        if (zeroCheck == zeroes) {
+                            printf("Puzzle could not be completed. Iterations: %d\n", checks);
+                            printPuzzle10(arr);
+                            return 0;
+                        }
                     }
                 }
             }
@@ -106,16 +130,12 @@ void ClaimingPairRowCol(int arr[9][9], int nums[9][9]) {
         for (j = 0; j < 9; j++) {
             if (arr[i][j] == 0) {   //if the element is not 0 then the square is already solved or was given to us
                 for (a = 0; a < 9; a++) {
-                    claimingPair = 0;
-                    if (a != j && arr[i][a] == 0) {
-                        claimingPair = nums[i][j] &
-                                       nums[i][a];     //set all bits in claimingPair that occur in both nums[i][j] and nums[i][a]
-                        if (claimingPair ==
-                            0) { break; }       //if the two squares have nothing in common, exit the loop and compare the next pair
-                        for (b = 0; b <
-                                    9; b++) {                 // for each square, go through every other square in the same row
-                            if (arr[i][b] == 0 && !(b == a || b ==
-                                                              j)) {  //make sure the square isn't already solved and isn't one of the same squares being checked
+                    claimingPair = 0;   //reset claimingPair
+                    if (a != j && arr[i][a] == 0) {     //make sure that its a different square and that its not a square that is already solved
+                        claimingPair = nums[i][j] & nums[i][a];     //set all bits in claimingPair that occur in both nums[i][j] and nums[i][a]
+                        if (claimingPair == 0) { break; }       //if the two squares have nothing in common, exit the loop and compare the next pair
+                        for (b = 0; b < 9; b++) {                 // for each square, go through every other square in the same row
+                            if (arr[i][b] == 0 && !(b == a || b == j)) {  //make sure the square isn't already solved and isn't one of the same squares being checked
                                 claimingPair &= nums[i][b];      //if there is a claiming pair, no other squares will have the same 2 bits set
                                 if (claimingPair == 0) { break; }   //break if no claiming pair
                             }
@@ -132,10 +152,8 @@ void ClaimingPairRowCol(int arr[9][9], int nums[9][9]) {
                             nums[i][j] &= claimingPair;     //in case these squares had other possible values, we set them equal to only the bits in claiming pair
                             nums[i][a] &= claimingPair;     //same thing for the second square being checked
                             for (c = 0; c < 9; c++) {
-                                if (arr[i][c] == 0 && !(c == a || c ==
-                                                                  j)) {  //make sure the square isn't already solved and isn't one of the same squares being checked
-                                    if (nums[i][c] != (nums[i][c] &
-                                                       ~(claimingPair))) { changed++; }    //increment changed if a square had its possible values altered
+                                if (arr[i][c] == 0 && !(c == a || c == j)) {  //make sure the square isn't already solved and isn't one of the same squares being checked
+                                    if (nums[i][c] != (nums[i][c] & ~(claimingPair))) { changed++; }    //increment changed if a square had its possible values altered
                                     nums[i][c] &= ~(claimingPair);  //clear all bits that nums[i][c] has in common with the claiming pair
                                 }
                             }
@@ -146,10 +164,10 @@ void ClaimingPairRowCol(int arr[9][9], int nums[9][9]) {
 
                 for (a = 0; a < 9; a++) {
                     claimingPair = 0;
-                    if (a != i && arr[a][j] == 0) {
+                    if (a != i && arr[a][j] == 0) {     //make sure that its a different square and that its not a square that is already solved
                         claimingPair = nums[i][j] & nums[a][j];     //set all bits in claimingPair that occur in both nums[i][j] and nums[a][j]
                         if (claimingPair == 0) { break; }       //if the two squares have nothing in common, exit the loop and compare the next pair
-                        for (b = 0; b < 9; b++) {                 // for each square, go through every other square in the same 3x3 box
+                        for (b = 0; b < 9; b++) {                 // for each square, go through every other square in the same column
                             if (arr[b][j] == 0 && !(b == a || b == i)) {  //make sure the square isn't already solved and isn't one of the same squares being checked
                                 claimingPair &= nums[b][j];      //if there is a claiming pair, no other squares will have the same 2 bits set
                                 if (claimingPair == 0) { break; }   //break if no claiming pair
@@ -191,7 +209,7 @@ void ClaimingPairBox(int arr[9][9], int nums[9][9]) {
                 column = 3 * (j / 3);      //0 if 0 <= j < 3, 3 if 3 <= j < 6, and 6 if 6 <= j < 9
                 for (a = row; a < row + 3; a++) {
                     for (b = column; b < column + 3; b++) {
-                        //claimingPair = 0;
+                        claimingPair = 0;   //reset claimingPair
                         if ((a != i || b != j) && arr[a][b] == 0) {
                             claimingPair = nums[i][j] & nums[a][b];
                             if (claimingPair == 0) { break; }       //if the two squares have nothing in common, exit the loop and compare the next pair
@@ -228,19 +246,31 @@ void ClaimingPairBox(int arr[9][9], int nums[9][9]) {
                     }
                 }
             }
-            if ((j + 1) % (3 * n) == 0) {
-                i++;
-                j = 3 * (n - 1);
-                if (i % (3 * m) == 0) {
-                    i = 3 * (m - 1);
-                    j = 3 * n;
-                    n++;
-                    if (n > 3) {
-                        n = 1;
-                        m++;
-                        j = 0;
-                        i = 3 * (m - 1);
-                        if (m > 3) { return; }
+
+            /*
+             * This code snippet allows the program to iterate through each square and its respective 3x3 box. No matter
+             * what square it is checking, it can calculate what 3x3 box it is in using "row = 3 * (i / 3)" and
+             * "column = 3 * (j / 3)" like on lines 208 and 209. Then we want to start at the top left square in that box
+             * and move across, then down to the next row of 3 but back at the first column, over again, then down to the
+             * third and final row of the box and then through the next two columns.
+             *
+             * n is the indicator for the column of 3x3 boxes. n = 1 means a first/left box, n = 2 means a middle box, and
+             * n = 3 means a right box. Likewise, m is the indicator for the row of 3x3 boxes. m = 1 means a top box, m = 2
+             * a middle box, and m = 3 a bottom box.
+             */
+            if ((j + 1) % (3 * n) == 0) {   //makes sure the next j value is not divisible by 3/6/9 (if it is then we crossed over to the next box, boxes go from 0-2, 3-5, and 6-8)
+                i++;        //go to the next row
+                j = 3 * (n - 1);    //j = 0 when n = 1, 3 when n = 2, and 6 when n = 3
+                if (i % (3 * m) == 0) {     //makes sure the current i value is not divisible by 3/6/9 (if it is then we crossed over to the next box)
+                    i = 3 * (m - 1);    //i = 0 when n = 1, 3 when n = 2, and 6 when n = 3
+                    j = 3 * n;      //j = 3 when n = 1, 6 when n = 2, and 9 when n = 3
+                    n++;    //go to the next column of boxes
+                    if (n > 3) {       //since there are only 3 boxesin each row, n cannot be 4
+                        n = 1;      //reset n
+                        m++;    //go to the next row of boxes
+                        j = 0;      //j always needs to be set to 0 because m just got incremented so we know we are on the left hand size of the puzzle again
+                        i = 3 * (m - 1);    //adjust i accordingly
+                        if (m > 3) { return; }  //since there are only 3 boxes in each column, m cannot be 4
                     }
                 }
             }
@@ -323,18 +353,18 @@ void HiddenSingleBox(int arr[9][9], int nums[9][9]) {
                 }
             }
             if ((j + 1) % (3 * n) == 0) {   //makes sure the next j value is not divisible by 3/6/9 (if it is then we crossed over to the next box, boxes go from 0-2, 3-5, and 6-8)
-                i++;                        //go to the next row
-                j = 3 * (n - 1);            //j = 0 when n = 1, 3 when n = 2, and 6 when n = 3
+                i++;                //go to the next row
+                j = 3 * (n - 1);         //j = 0 when n = 1, 3 when n = 2, and 6 when n = 3
                 if (i % (3 * m) == 0) {     //makes sure the current i value is not divisible by 3/6/9 (if it is then we crossed over to the next box)
-                    i = 3 * (m - 1);        //i = 0 when n = 1, 3 when n = 2, and 6 when n = 3
-                    j = 3 * n;              //j = 3 when n = 1, 6 when n = 2, and 9 when n = 3
-                    n++;
+                    i = 3 * (m - 1);      //i = 0 when n = 1, 3 when n = 2, and 6 when n = 3
+                    j = 3 * n;         //j = 3 when n = 1, 6 when n = 2, and 9 when n = 3
+                    n++;    //go to the next column of boxes
                     if (n > 3) {        //n cannot be greater than 3
-                        n = 1;
+                        n = 1;      //reset n
                         m++;            //go to the next row of boxes
-                        j = 0;
-                        i = 3 * (m - 1);
-                        if (m > 3) { return; }
+                        j = 0;      //j always needs to be set to 0 because m just got incremented so we know we are on the left hand size of the puzzle again
+                        i = 3 * (m - 1);    //adjust i accordingly
+                        if (m > 3) { return; }      //since there are only 3 boxes in each column, m cannot be 4
                     }
                 }
             }
