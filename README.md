@@ -2,7 +2,7 @@
 
 how to build:
   navigate to directory with main.c
-  >gcc sudoku main.c
+  >gcc -o sudoku main.c
   
   This will give you an executable file called 'sudoku' in which you simply type:
   >sudoku
