@@ -6,6 +6,7 @@ how to build:
   
   This will give you an executable file called 'sudoku' in which you simply type:
   >sudoku
+  
   to run it. Make sure there is a txt file called 'puzzle.txt' in the same directory as main.c in the format
   000000000
   000000000
