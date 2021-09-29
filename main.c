@@ -49,7 +49,7 @@ int main() {
     int i, j, checks, in, zeroCheck, zeroes = 0;
     int arr[9][9], nums[9][9];
     char buffer[11];
-    inputptr = fopen("puzzle1.txt", "r");
+    inputptr = fopen("puzzle.txt", "r");
     for (i = 0; i < 9; i++) {
         fgets(buffer, 11, inputptr);
         sscanf(buffer, "%d", &in);      //stores a row of values into in (thus in would be a 9 digit integer)
