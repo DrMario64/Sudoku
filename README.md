@@ -8,15 +8,15 @@ how to build:
   >sudoku
   
   to run it. Make sure there is a txt file called 'puzzle.txt' in the same directory as main.c in the format
-  000000000\n
-  000000000\n
-  000000000\n
-  000000000\n
-  000000000\n
-  000000000\n
-  000000000\n
-  000000000\n
-  000000000\n
+  000000000 
+  000000000 
+  000000000 
+  000000000 
+  000000000 
+  000000000 
+  000000000 
+  000000000 
+  000000000 
   where each 0 represents an empty space on the given sudoku puzzle. Replace 0s with given numbers where necessary.
   
 EXAMPLE PUZZLES:
